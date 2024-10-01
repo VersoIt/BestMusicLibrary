@@ -3,8 +3,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -29,14 +29,14 @@ type ExternalSongApiClientImpl struct {
 func (c *ExternalSongApiClientImpl) FetchSongDetails(group, song string) (*SongApiResponse, error) {
 	url := fmt.Sprintf("%s/info?group=%s&song=%s", c.baseUrl, group, song)
 	resp, err := http.Get(url)
-	if err != nil {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		return nil, err
 	}
 
 	defer func(Body io.ReadCloser) {
 		err = Body.Close()
 		if err != nil {
-			log.Printf("error closing client response body from %s\n", url)
+			logrus.Errorf("error closing client response body from %s\n", url)
 		}
 	}(resp.Body)
 
