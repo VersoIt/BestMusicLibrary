@@ -1,0 +1,231 @@
+basePath: /
+definitions:
+  handler.newSongRequest:
+    properties:
+      group:
+        type: string
+      song:
+        type: string
+    type: object
+  handler.songResponse:
+    properties:
+      created_at:
+        type: string
+      group:
+        type: string
+      id:
+        type: integer
+      link:
+        type: string
+      name:
+        type: string
+      release_date:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  handler.songUpdate:
+    properties:
+      created_at:
+        type: string
+      group:
+        type: string
+      id:
+        type: integer
+      link:
+        type: string
+      name:
+        type: string
+      release_date:
+        type: string
+      text:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.Verse:
+    properties:
+      text:
+        type: string
+      verse_number:
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API Server for MusicLibrary application
+  title: MusicLibrary App
+  version: "1.0"
+paths:
+  /songs/add:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new song to the database based on the provided song details.
+      parameters:
+      - description: New song details
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/handler.newSongRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully added song with its ID
+          schema:
+            type: string
+        "400":
+          description: Invalid request method
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Add a new song
+      tags:
+      - songs
+  /songs/delete:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a song from the database using its ID.
+      parameters:
+      - description: Song ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully deleted song
+          schema:
+            type: string
+        "400":
+          description: Invalid query parameters or request method
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Delete a song
+      tags:
+      - songs
+  /songs/get:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of songs from the database. You can filter the
+        results by group name and song name, and paginate the results using the page
+        and limit query parameters.
+      parameters:
+      - description: Filter by group name
+        in: query
+        name: group
+        type: string
+      - description: Filter by song name
+        in: query
+        name: song
+        type: string
+      - description: Page number for pagination
+        in: query
+        name: page
+        type: integer
+      - description: Limit the number of songs per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response
+          schema:
+            items:
+              $ref: '#/definitions/handler.songResponse'
+            type: array
+        "400":
+          description: Invalid query parameters or request method
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get list of songs
+      tags:
+      - songs
+  /songs/update:
+    put:
+      consumes:
+      - application/json
+      description: Updates the details of a song in the database using the provided
+        data.
+      parameters:
+      - description: Song update details
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/handler.songUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Song successfully updated
+          schema:
+            type: string
+        "400":
+          description: Invalid request body
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Update a song
+      tags:
+      - songs
+  /songs/verses:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves verses of a song based on the song ID with optional pagination.
+      parameters:
+      - description: Song ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of verses per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of song verses
+          schema:
+            $ref: '#/definitions/model.Verse'
+        "400":
+          description: Invalid query parameters
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get song verses
+      tags:
+      - songs
+swagger: "2.0"

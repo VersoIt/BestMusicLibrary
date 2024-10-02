@@ -1,7 +1,6 @@
 package service
 
 import (
-	"BestMusicLibrary/internal/client"
 	"BestMusicLibrary/internal/model"
 	"BestMusicLibrary/internal/repository"
 )
@@ -18,6 +17,6 @@ type Service struct {
 	Song Song
 }
 
-func NewService(repos *repository.Repository, externalClient client.ExternalSongApiClient) *Service {
-	return &Service{Song: NewSongService(repos.Song, externalClient)}
+func NewService(repos *repository.Repository, songDataFetcher SongDataFetcher) *Service {
+	return &Service{Song: NewSongService(repos.Song, songDataFetcher)}
 }

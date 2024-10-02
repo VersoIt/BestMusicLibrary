@@ -1,17 +1,26 @@
 package service
 
 import (
-	"BestMusicLibrary/internal/client"
 	"BestMusicLibrary/internal/model"
 	"BestMusicLibrary/internal/repository"
-	"github.com/sirupsen/logrus"
+	"context"
 	"strings"
 	"time"
 )
 
+type SongFetchData struct {
+	ReleaseDate string
+	Text        string
+	Link        string
+}
+
+type SongDataFetcher interface {
+	FetchSongDetails(group, song string) (SongFetchData, error)
+}
+
 type SongService struct {
-	songRepos  repository.Song
-	songClient client.ExternalSongApiClient
+	songRepos       repository.Song
+	songDataFetcher SongDataFetcher
 }
 
 const (
@@ -19,8 +28,8 @@ const (
 	defaultLimitPagingAmount = 5
 )
 
-func NewSongService(repos repository.Song, songClient client.ExternalSongApiClient) *SongService {
-	return &SongService{songRepos: repos, songClient: songClient}
+func NewSongService(repos repository.Song, songFetcher SongDataFetcher) *SongService {
+	return &SongService{songRepos: repos, songDataFetcher: songFetcher}
 }
 
 // GetSongs Получение данных библиотеки с фильтрацией по всем полям и пагинацией
@@ -48,7 +57,9 @@ func (s *SongService) UpdateSong(song model.Song, text string) error {
 
 // AddSong Добавление песни
 func (s *SongService) AddSong(song model.Song) (int64, error) {
-	enrichedSong, err := s.enrichSongWithAPI(song)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	enrichedSong, err := s.enrichSongWithAPI(ctx, song)
 	if err != nil {
 		return 0, err
 	}
@@ -57,10 +68,29 @@ func (s *SongService) AddSong(song model.Song) (int64, error) {
 }
 
 // EnrichSongWithAPI Обогащение данных с использованием стороннего сервиса
-func (s *SongService) enrichSongWithAPI(song model.Song) (enrichedSong model.Song, err error) {
-	logrus.Error("enriching song '%s'\n", song.Name)
+func (s *SongService) enrichSongWithAPI(ctx context.Context, song model.Song) (enrichedSong model.Song, err error) {
+	errChan := make(chan error)
+	resChan := make(chan SongFetchData)
 
-	songDetails, err := s.songClient.FetchSongDetails(song.Group, song.Name)
+	go func() {
+		songDetails, clientError := s.songDataFetcher.FetchSongDetails(song.Group, song.Name)
+		if clientError != nil {
+			errChan <- clientError
+			return
+		}
+		resChan <- songDetails
+	}()
+
+	var songDetails SongFetchData
+	select {
+	case clientError := <-errChan:
+		return model.Song{}, clientError
+	case res := <-resChan:
+		songDetails = res
+	case <-ctx.Done():
+		return model.Song{}, ctx.Err()
+	}
+
 	if err != nil {
 		return song, err
 	}
@@ -89,9 +119,14 @@ func handlePagingData(rawPage, rawLimit int) (page, limit int) {
 
 func textToVerses(text string) []model.Verse {
 	verses := strings.Split(text, "\n\n")
-	var cleanedVerses []model.Verse
-	for index, verse := range verses {
-		cleanedVerses = append(cleanedVerses, model.Verse{VerseNumber: index, Text: strings.TrimSpace(verse)})
+	cleanedVerses := make([]model.Verse, 0)
+	count := 0
+	for _, verse := range verses {
+		cleanedVerse := strings.TrimSpace(verse)
+		if cleanedVerse != "" {
+			cleanedVerses = append(cleanedVerses, model.Verse{VerseNumber: count, Text: cleanedVerse})
+			count++
+		}
 	}
 	return cleanedVerses
 }

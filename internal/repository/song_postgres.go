@@ -17,7 +17,7 @@ func (*SongPostgresRepository) NewSongRepository() *SongPostgresRepository {
 
 func (s *SongPostgresRepository) GetSongs(group, songName string, page, limit int) ([]model.Song, error) {
 	offset := page * limit
-	rows, err := s.db.Query(`SELECT * FROM songs WHERE group_name = $1 OR song_title = $2 ORDER BY id LIMIT $3 OFFSET $4`, group, songName, limit, offset)
+	rows, err := s.db.Query(`SELECT * FROM songs WHERE (LENGTH($1) > 0 AND group_name ILIKE '%' || $1 || '%') OR (LENGTH($2) > 0 AND song_title ILIKE '%' || $2 || '%') ORDER BY id LIMIT $3 OFFSET $4`, group, songName, limit, offset)
 	if err != nil {
 		return nil, err
 	}

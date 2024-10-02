@@ -11,11 +11,11 @@ type Handler struct {
 }
 
 func (h *Handler) InitRoutes() {
-	http.HandleFunc("/song/get", h.GetSongs)
-	http.HandleFunc("/song/add", h.AddSong)
-	http.HandleFunc("/song/delete", h.DeleteSong)
-	http.HandleFunc("/song/update", h.UpdateSong)
-	http.HandleFunc("/song/verses", h.GetSongVerses)
+	http.HandleFunc("/songs/get", h.GetSongs)
+	http.HandleFunc("/songs/add", h.AddSong)
+	http.HandleFunc("/songs/delete", h.DeleteSong)
+	http.HandleFunc("/songs/update", h.UpdateSong)
+	http.HandleFunc("/songs/verses", h.GetSongVerses)
 }
 
 func NewHandler(service *service.Service) *Handler {

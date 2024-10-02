@@ -11,17 +11,31 @@ import (
 	"time"
 )
 
-func (h *Handler) GetSongs(w http.ResponseWriter, r *http.Request) {
-	type songResponse struct {
-		Id          int64     `json:"id"`
-		Group       string    `json:"group"`
-		Name        string    `json:"name"`
-		ReleaseDate time.Time `json:"release_date"`
-		Link        string    `json:"link"`
-		CreatedAt   time.Time `json:"created_at"`
-		UpdatedAt   time.Time `json:"updated_at"`
-	}
+type songResponse struct {
+	Id          int64     `json:"id"`
+	Group       string    `json:"group"`
+	Name        string    `json:"name"`
+	ReleaseDate time.Time `json:"release_date"`
+	Link        string    `json:"link"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
 
+// GetSongs godoc
+// @Summary      Get list of songs
+// @Description  Retrieves a list of songs from the database. You can filter the results by group name and song name, and paginate the results using the page and limit query parameters.
+// @Tags         songs
+// @Accept       json
+// @Produce      json
+// @Param        group   query   string  false  "Filter by group name"
+// @Param        song    query   string  false  "Filter by song name"
+// @Param        page    query   int     false  "Page number for pagination"
+// @Param        limit   query   int     false  "Limit the number of songs per page"
+// @Success      200     {array} songResponse  "Successful response"
+// @Failure      400     {string} string "Invalid query parameters or request method"
+// @Failure      500     {string} string "Internal server error"
+// @Router       /songs/get [get]
+func (h *Handler) GetSongs(w http.ResponseWriter, r *http.Request) {
 	if err := handleRequestMethod(w, http.MethodGet, r.Method); err != nil {
 		logrus.Error(err)
 		return
@@ -37,7 +51,7 @@ func (h *Handler) GetSongs(w http.ResponseWriter, r *http.Request) {
 		"song":  song,
 		"page":  page,
 		"limit": limit,
-	}).Info("received query parameters")
+	}).Debug("received query parameters")
 
 	pageNum, limitNum, err := parsePagingData(page, limit)
 
@@ -98,6 +112,17 @@ type newSongRequest struct {
 	Song  string `json:"song"`
 }
 
+// AddSong godoc
+// @Summary Add a new song
+// @Description Adds a new song to the database based on the provided song details.
+// @Tags         songs
+// @Accept       json
+// @Produce      json
+// @Param        song  body  newSongRequest  true  "New song details"
+// @Success      201  {string}  string  "Successfully added song with its ID"
+// @Failure      400  {string}  string "Invalid request method"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /songs/add [post]
 func (h *Handler) AddSong(w http.ResponseWriter, r *http.Request) {
 	if err := handleRequestMethod(w, http.MethodPost, r.Method); err != nil {
 		logrus.Error(err)
@@ -132,6 +157,17 @@ func (h *Handler) AddSong(w http.ResponseWriter, r *http.Request) {
 	logrus.WithField("songId", songId).Info("response successfully sent")
 }
 
+// DeleteSong godoc
+// @Summary      Delete a song
+// @Description  Deletes a song from the database using its ID.
+// @Tags         songs
+// @Accept       json
+// @Produce      json
+// @Param        id  query  int  true  "Song ID"
+// @Success      200  {string}  string  "Successfully deleted song"
+// @Failure      400  {string}  string "Invalid query parameters or request method"
+// @Failure      500  {string}  string  "Internal server error"
+// @Router       /songs/delete [delete]
 func (h *Handler) DeleteSong(w http.ResponseWriter, r *http.Request) {
 	if err := handleRequestMethod(w, http.MethodDelete, r.Method); err != nil {
 		logrus.Error(err)
@@ -140,10 +176,10 @@ func (h *Handler) DeleteSong(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.URL.Query().Get("id"))
 	logrus.WithFields(logrus.Fields{
 		"id": id,
-	}).Info("received query parameters")
+	}).Debug("received query parameters")
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		logrus.Error(err)
 		return
 	}
@@ -158,18 +194,29 @@ func (h *Handler) DeleteSong(w http.ResponseWriter, r *http.Request) {
 	logrus.Info("response successfully sent")
 }
 
-func (h *Handler) UpdateSong(w http.ResponseWriter, r *http.Request) {
+type songUpdate struct {
+	Id          int64     `json:"id"`
+	Group       string    `json:"group"`
+	Name        string    `json:"name"`
+	ReleaseDate time.Time `json:"release_date"`
+	Text        string    `json:"text"`
+	Link        string    `json:"link"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
 
-	type songUpdate struct {
-		Id          int64     `json:"id"`
-		Group       string    `json:"group"`
-		Name        string    `json:"name"`
-		ReleaseDate time.Time `json:"release_date"`
-		Text        string    `json:"text"`
-		Link        string    `json:"link"`
-		CreatedAt   time.Time `json:"created_at"`
-		UpdatedAt   time.Time `json:"updated_at"`
-	}
+// UpdateSong godoc
+// @Summary      Update a song
+// @Description  Updates the details of a song in the database using the provided data.
+// @Tags         songs
+// @Accept       json
+// @Produce      json
+// @Param        song  body  songUpdate  true  "Song update details"
+// @Success      200  {string}  string "Song successfully updated"
+// @Failure      400  {string}  string "Invalid request body"
+// @Failure      500  {string}  string "Internal server error"
+// @Router       /songs/update [put]
+func (h *Handler) UpdateSong(w http.ResponseWriter, r *http.Request) {
 
 	if err := handleRequestMethod(w, http.MethodPut, r.Method); err != nil {
 		logrus.Error(err)
@@ -210,6 +257,19 @@ func (h *Handler) UpdateSong(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// GetSongVerses godoc
+// @Summary      Get song verses
+// @Description  Retrieves verses of a song based on the song ID with optional pagination.
+// @Tags         songs
+// @Accept       json
+// @Produce      json
+// @Param        id     query  int     true   "Song ID"
+// @Param        page   query  int     false  "Page number"
+// @Param        limit  query  int     false  "Number of verses per page"
+// @Success      200    {object}  model.Verse  "List of song verses"
+// @Failure      400    {object}  string  "Invalid query parameters"
+// @Failure      500    {object}  string  "Internal server error"
+// @Router       /songs/verses [get]
 func (h *Handler) GetSongVerses(w http.ResponseWriter, r *http.Request) {
 	if err := handleRequestMethod(w, http.MethodGet, r.Method); err != nil {
 		logrus.Error(err)
@@ -223,7 +283,7 @@ func (h *Handler) GetSongVerses(w http.ResponseWriter, r *http.Request) {
 		"id":    id,
 		"page":  page,
 		"limit": limit,
-	}).Info("parsed query parameters")
+	}).Debug("parsed query parameters")
 
 	pageNum, limitNum, err := parsePagingData(page, limit)
 
@@ -232,7 +292,7 @@ func (h *Handler) GetSongVerses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	text, err := h.service.Song.GetSongVerses(int64(id), pageNum, limitNum)
+	verses, err := h.service.Song.GetSongVerses(int64(id), pageNum, limitNum)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -244,7 +304,7 @@ func (h *Handler) GetSongVerses(w http.ResponseWriter, r *http.Request) {
 		"limit": limitNum,
 	}).Info("successfully retrieved song verses")
 
-	err = json.NewEncoder(w).Encode(text)
+	err = json.NewEncoder(w).Encode(verses)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -252,14 +312,14 @@ func (h *Handler) GetSongVerses(w http.ResponseWriter, r *http.Request) {
 
 	logrus.WithFields(logrus.Fields{
 		"id":     id,
-		"verses": len(text), // Assuming text is a slice or array
+		"verses": len(verses), // Assuming text is a slice or array
 	}).Info("response successfully sent")
 }
 
 func handleRequestMethod(w http.ResponseWriter, requiredMethod, currentMethod string) error {
 	if currentMethod != requiredMethod {
 		errText := fmt.Sprintf("method %s required!", requiredMethod)
-		http.Error(w, errText, http.StatusMethodNotAllowed)
+		http.Error(w, errText, http.StatusBadRequest)
 		return errors.New(errText)
 	}
 	return nil
