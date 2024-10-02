@@ -8,7 +8,9 @@ import (
 	"BestMusicLibrary/internal/handler"
 	"BestMusicLibrary/internal/repository"
 	"BestMusicLibrary/internal/service"
+	"BestMusicLibrary/migrations"
 	"context"
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
@@ -21,15 +23,26 @@ import (
 // @title MusicLibrary App
 // @version 1.0
 // @description API Server for MusicLibrary application
-
 // @host localhost:8080
 // @BasePath /
-
 func main() {
 	config := cfg.Get()
 	db, err := repository.NewPostgresDb(repository.Config{Host: config.DbHost, Port: config.DbPort, UserName: config.DbUser, Password: config.DbPassword, DbName: config.DbName, SSLMode: config.DbSSLMode})
+	defer func(db *sqlx.DB) {
+		err = db.Close()
+		if err != nil {
+			logrus.Error(err)
+		}
+	}(db)
+
 	if err != nil {
 		logrus.Fatal(err)
+		return
+	}
+
+	dbMigrator := migrations.NewDbMigrator(db, "migrations")
+	if err = dbMigrator.Migrate(); err != nil {
+		logrus.Error(err)
 		return
 	}
 
@@ -45,7 +58,7 @@ func main() {
 
 	go func() {
 		if err = srv.Run(config.ServerPort, nil); err != nil {
-			logrus.Fatal(err)
+			logrus.Error(err)
 		}
 	}()
 
@@ -56,11 +69,6 @@ func main() {
 	<-quit
 
 	logrus.Info("shutting down server...")
-
-	err = db.Close()
-	if err != nil {
-		logrus.Error(err)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
